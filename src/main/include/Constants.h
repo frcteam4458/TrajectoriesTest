@@ -3,6 +3,7 @@
 #include <units/length.h>
 #include <units/velocity.h>
 #include <units/acceleration.h>
+#include <frc/kinematics/DifferentialDriveKinematics.h>
 
 #pragma once
 
@@ -32,7 +33,7 @@ const units::meters_per_second_t MAX_SPEED{6};
 const units::meters_per_second_squared_t MAX_ACCEL{3};
 
 const units::radians_per_second_t MAX_ROT_SPEED{3};
-
+const frc::DifferentialDriveKinematics differentialKinematics{units::meter_t{WIDTH}};
 const frc::MecanumDriveKinematics kinematics{FL, FR, BL, BR};
 
 const auto kS = 0.22_V;

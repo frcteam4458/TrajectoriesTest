@@ -16,6 +16,8 @@
 #include <frc2/command/SequentialCommandGroup.h>
 #include <frc2/command/InstantCommand.h>
 
+#include "Constants.h"
+
 class RobotContainer {
  public:
   RobotContainer();
@@ -33,7 +35,9 @@ class RobotContainer {
   frc::TrajectoryConfig trajectoryConfig;
   frc::Trajectory autoTrajectory;
   frc2::RamseteCommand autoCommand;
-  // frc2::SequentialCommandGroup autoCommandGroup;
+  frc2::SequentialCommandGroup autoCommandGroup;
+
+  const frc::SimpleMotorFeedforward<units::meters> feedforward{kS, kV, kA};
 
   void ConfigureButtonBindings();
 };
