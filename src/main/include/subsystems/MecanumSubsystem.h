@@ -30,6 +30,9 @@
 
 #include <frc/shuffleboard/Shuffleboard.h>
 
+#include <frc/kinematics/MecanumDriveWheelSpeeds.h>
+#include <frc/kinematics/DifferentialDriveWheelSpeeds.h>
+
 class MecanumSubsystem : public frc2::SubsystemBase {
  public:
   MecanumSubsystem();
@@ -38,6 +41,7 @@ class MecanumSubsystem : public frc2::SubsystemBase {
   void SimulationPeriodic() override;
 
   void Drive(units::meters_per_second_t vx, units::meters_per_second_t vy, units::radians_per_second_t omega);
+  void Drive(units::meters_per_second_t left, units::meters_per_second_t right);
   void DriveVoltages(units::volt_t _fl, units::volt_t _fr, units::volt_t _bl, units::volt_t _br);
   void Drive(units::meters_per_second_t vy, units::radians_per_second_t omega);
   void DriveVoltages(units::volt_t left, units::volt_t right);
@@ -48,6 +52,9 @@ class MecanumSubsystem : public frc2::SubsystemBase {
   double GetAngleRaw();
 
   frc::Pose2d GetPose();
+
+  frc::DifferentialDriveWheelSpeeds GetDifferentialWheelSpeeds();
+  frc::MecanumDriveWheelSpeeds GetMecanumWheelSpeeds();
 
  private:
   frc::PWMSparkMax fl;
@@ -75,14 +82,9 @@ class MecanumSubsystem : public frc2::SubsystemBase {
   frc::sim::AnalogGyroSim s_gyro;
 
   frc::Pose2d pose;
-  
-  frc::MecanumDriveKinematics kinematics;
   frc::MecanumDriveOdometry odometry;
 
-  frc::SimpleMotorFeedforward<units::meters> flFeedforward;
-  frc::SimpleMotorFeedforward<units::meters> frFeedforward;
-  frc::SimpleMotorFeedforward<units::meters> blFeedforward;
-  frc::SimpleMotorFeedforward<units::meters> brFeedforward;
+  frc::SimpleMotorFeedforward<units::meters> feedforward;
 
   frc::Field2d field;
 
