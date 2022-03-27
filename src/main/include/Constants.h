@@ -29,15 +29,15 @@ const frc::Translation2d BL{-.254_m, .305_m};
 const frc::Translation2d BR{-.254_m, -.305_m};
 const double WIDTH = 0.508;
 
-const units::meters_per_second_t MAX_SPEED{6};
-const units::meters_per_second_squared_t MAX_ACCEL{3};
+const units::meters_per_second_t MAX_SPEED{3};
+const units::meters_per_second_squared_t MAX_ACCEL{1.5};
 
-const units::radians_per_second_t MAX_ROT_SPEED{3};
+const units::radians_per_second_t MAX_ROT_SPEED{2};
 const frc::DifferentialDriveKinematics differentialKinematics{units::meter_t{WIDTH}};
 const frc::MecanumDriveKinematics kinematics{FL, FR, BL, BR};
 
 const auto kS = 0.22_V;
-const auto kV = 1.98 * 1_V * 1_s / 1_m;
+const auto kV = 4.25 * 1_V * 1_s / 1_m;
 const auto kA = 0.2 * 1_V * 1_s * 1_s / 1_m;
 
 const double ramseteB = 2;

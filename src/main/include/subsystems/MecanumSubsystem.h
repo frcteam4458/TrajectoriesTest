@@ -56,6 +56,8 @@ class MecanumSubsystem : public frc2::SubsystemBase {
   frc::DifferentialDriveWheelSpeeds GetDifferentialWheelSpeeds();
   frc::MecanumDriveWheelSpeeds GetMecanumWheelSpeeds();
 
+  void SetPose(frc::Pose2d _pose);
+
  private:
   frc::PWMSparkMax fl;
   frc::PWMSparkMax fr;

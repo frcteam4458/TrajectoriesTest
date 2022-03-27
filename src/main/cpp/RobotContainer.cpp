@@ -7,27 +7,44 @@
 
 #include <frc/trajectory/constraint/DifferentialDriveVoltageConstraint.h>
 
+#include <frc/Filesystem.h>
+#include <frc/trajectory/TrajectoryUtil.h>
+#include <wpi/fs.h>
+
 RobotContainer::RobotContainer() :
 mecanumSubsystem{},
 
 teleopCommand{&mecanumSubsystem, 0, 1},
 
 trajectoryConfig{MAX_SPEED, MAX_ACCEL},
-autoTrajectory{frc::TrajectoryGenerator::GenerateTrajectory(
-  frc::Pose2d{0_m, 5_m, frc::Rotation2d(0_deg)},
-  {frc::Translation2d{5_m, 2.5_m}, frc::Translation2d{10_m, 7.5_m}},
-  frc::Pose2d{15_m, 5_m, frc::Rotation2d{0_deg}},
 
+// autoTrajectory{frc::TrajectoryGenerator::GenerateTrajectory(
+//   frc::Pose2d{0_m, 5_m, frc::Rotation2d(0_deg)},
+//   {frc::Translation2d{5_m, 2.5_m}, frc::Translation2d{10_m, 7.5_m}},
+//   frc::Pose2d{15_m, 5_m, frc::Rotation2d{0_deg}},
+
+//   trajectoryConfig
+// )},
+
+autoTrajectory{frc::TrajectoryGenerator::GenerateTrajectory(
+  frc::Pose2d{7_m, 4.5_m, frc::Rotation2d{0_deg}},
+  {
+    frc::Translation2d{5.7_m, 5.7_m},
+    frc::Translation2d{6_m, 5_m},
+    frc::Translation2d{7.6_m, 7.3_m},
+    frc::Translation2d{5.6_m, 2.7_m},
+    frc::Translation2d{7.9_m, 1.2_m}
+  },
+  frc::Pose2d{7.7_m, 2_m, frc::Rotation2d{0_deg}},
   trajectoryConfig
 )},
+
+// autoTrajectory(frc::TrajectoryUtil::FromPathweaverJson(frc::filesystem::GetDeployDirectory() + "/Auto2.wpilib.json")),
 
 autoCommand{
   autoTrajectory,
   [this]() { return mecanumSubsystem.GetPose(); },
   frc::RamseteController{ramseteB, ramseteZeta},
-  // frc::SimpleMotorFeedforward<units::meters>{kS, kV, kA},
-  // frc::SimpleMotorFeedforward<units::meters>{kS, kV, kA},
-  // frc::SimpleMotorFeedforward<units::meters>{kS, kV, kA},
   frc::SimpleMotorFeedforward<units::meters>{0_V, 1_V * 1_s / 1_m},  
   frc::DifferentialDriveKinematics{units::meter_t{WIDTH}},
   [this] { return mecanumSubsystem.GetDifferentialWheelSpeeds(); },
@@ -39,13 +56,14 @@ autoCommand{
   {&mecanumSubsystem}    
 },
 
-autoCommandGroup{std::move(autoCommand), frc2::InstantCommand{[this]{ mecanumSubsystem.DriveVoltages(0_V, 0_V); }, {&mecanumSubsystem}}}
+autoCommandGroup{frc2::InstantCommand{[this]{ mecanumSubsystem.SetPose(autoTrajectory.InitialPose()); }, {&mecanumSubsystem}}, std::move(autoCommand), frc2::InstantCommand{[this]{ mecanumSubsystem.DriveVoltages(0_V, 0_V); }, {&mecanumSubsystem}}}
 
 {
   ConfigureButtonBindings();
   trajectoryConfig.SetKinematics(differentialKinematics);
   frc::DifferentialDriveVoltageConstraint voltageConstraint{feedforward, differentialKinematics, units::volt_t{12}};
   trajectoryConfig.AddConstraint(voltageConstraint);
+
 }
 
 void RobotContainer::ConfigureButtonBindings() {
@@ -57,5 +75,6 @@ frc2::Command* RobotContainer::GetTeleopCommand() {
 }
 
 frc2::Command* RobotContainer::GetAutonomousCommand() {
+  
   return &autoCommandGroup;
 }

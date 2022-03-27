@@ -36,10 +36,10 @@ s_brEncoder{brEncoder},
 
 s_gyro{gyro},
 
-pose{0_m, 0_m, frc::Rotation2d{0_deg}},
+pose{8_m, 2_m, frc::Rotation2d{0_deg}},
 odometry{kinematics, units::degree_t{gyro.GetAngle()}, pose},
 
-feedforward{kS, kV, kA}
+feedforward{kS, kV}
 {
   fl.SetInverted(true);
   bl.SetInverted(true);
@@ -60,6 +60,8 @@ void MecanumSubsystem::Periodic() {
   odometry.Update(frc::Rotation2d{GetAngle()}, wheelSpeeds);  
   field.SetRobotPose(odometry.GetPose());
   frc::SmartDashboard::PutData("Field", &field);
+
+  
 }
 
 void MecanumSubsystem::SimulationPeriodic() {
@@ -101,10 +103,10 @@ void MecanumSubsystem::DriveVoltages(units::volt_t _fl, units::volt_t _fr, units
   bl.SetVoltage(_bl);
   br.SetVoltage(_br);
 
-  s_fl.SetSpeed(_fl.value() / -12);
-  s_fr.SetSpeed(_fr.value() / 12);
-  s_bl.SetSpeed(_bl.value() / -12);
-  s_br.SetSpeed(_br.value() / 12);
+  s_fl.SetSpeed(std::clamp(_fl.value(), -12.0, 12.0) / -12);
+  s_fr.SetSpeed(std::clamp(_fr.value(), -12.0, 12.0) / 12);
+  s_bl.SetSpeed(std::clamp(_bl.value(), -12.0, 12.0) / -12);
+  s_br.SetSpeed(std::clamp(_br.value(), -12.0, 12.0) / 12);
 }
 
 void MecanumSubsystem::Drive(units::meters_per_second_t vx, units::radians_per_second_t omega) {
@@ -140,4 +142,9 @@ frc::MecanumDriveWheelSpeeds MecanumSubsystem::GetMecanumWheelSpeeds() {
 
 frc::DifferentialDriveWheelSpeeds MecanumSubsystem::GetDifferentialWheelSpeeds() {
   return {units::meters_per_second_t{flEncoder.GetRate()}, units::meters_per_second_t{frEncoder.GetRate()}};
+}
+
+void MecanumSubsystem::SetPose(frc::Pose2d _pose) {
+  pose = _pose;
+  odometry = frc::MecanumDriveOdometry{kinematics, _pose.Rotation().Degrees(), _pose};
 }
