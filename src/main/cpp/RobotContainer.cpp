@@ -15,43 +15,70 @@ RobotContainer::RobotContainer() :
 mecanumSubsystem{},
 
 teleopCommand{&mecanumSubsystem, 0, 1},
+testTurnCommand{&mecanumSubsystem, 90},
 
 trajectoryConfig{MAX_SPEED, MAX_ACCEL},
 
 // autoTrajectory{frc::TrajectoryGenerator::GenerateTrajectory(
 //   frc::Pose2d{0_m, 5_m, frc::Rotation2d(0_deg)},
-//   {frc::Translation2d{5_m, 2.5_m}, frc::Translation2d{10_m, 7.5_m}},
+//   {
+//     frc::Translation2d{1_m, 4.75_m},
+//     frc::Translation2d{2_m, 4.5_m},
+//     frc::Translation2d{3_m, 4.25_m},
+//     frc::Translation2d{4_m, 4_m},
+//     frc::Translation2d{5_m, 4.25_m},
+//     frc::Translation2d{6_m, 4.5_m},
+//     frc::Translation2d{7_m, 4.75_m},
+//     frc::Translation2d{8_m, 6_m},
+//     frc::Translation2d{9_m, 5_m},
+//     frc::Translation2d{10_m, 5_m},
+//     frc::Translation2d{11_m, 5_m},
+//     frc::Translation2d{12_m, 5_m},
+//     frc::Translation2d{13_m, 5_m},
+//     frc::Translation2d{14_m, 5_m}
+//   },
 //   frc::Pose2d{15_m, 5_m, frc::Rotation2d{0_deg}},
 
 //   trajectoryConfig
 // )},
 
-autoTrajectory{frc::TrajectoryGenerator::GenerateTrajectory(
-  frc::Pose2d{7_m, 4.5_m, frc::Rotation2d{0_deg}},
-  {
-    frc::Translation2d{5.7_m, 5.7_m},
-    frc::Translation2d{6_m, 5_m},
-    frc::Translation2d{7.6_m, 7.3_m},
-    frc::Translation2d{5.6_m, 2.7_m},
-    frc::Translation2d{7.9_m, 1.2_m}
-  },
-  frc::Pose2d{7.7_m, 2_m, frc::Rotation2d{0_deg}},
-  trajectoryConfig
-)},
+// autoTrajectory{frc::TrajectoryGenerator::GenerateTrajectory(
+//   frc::Pose2d{7_m, 4.5_m, frc::Rotation2d{0_deg}},
+//   {
+//     frc::Translation2d{5.7_m, 5.7_m},
+//     frc::Translation2d{6_m, 5_m},
+//     frc::Translation2d{7.6_m, 7.3_m},
+//     frc::Translation2d{5.6_m, 2.7_m},
+//     frc::Translation2d{7.9_m, 1.2_m}
+//   },
+//   frc::Pose2d{7.7_m, 2_m, frc::Rotation2d{180_deg}},
+//   trajectoryConfig
+// )},
 
-// autoTrajectory(frc::TrajectoryUtil::FromPathweaverJson(frc::filesystem::GetDeployDirectory() + "/Auto2.wpilib.json")),
+autoTrajectory(frc::TrajectoryUtil::FromPathweaverJson(frc::filesystem::GetDeployDirectory() + "/Auto2.wpilib.json")),
 
 autoCommand{
-  autoTrajectory,
+  // autoTrajectory,
+  frc::TrajectoryGenerator::GenerateTrajectory(
+    frc::Pose2d{0_m, 0_m, frc::Rotation2d{0_deg}},
+
+    {frc::Translation2d{1_m, 1_m}, frc::Translation2d{2_m, -1_m}},
+
+    frc::Pose2d{3_m, 0_m, frc::Rotation2d{0_deg}},
+
+    trajectoryConfig
+  ),
+
   [this]() { return mecanumSubsystem.GetPose(); },
   frc::RamseteController{ramseteB, ramseteZeta},
-  frc::SimpleMotorFeedforward<units::meters>{0_V, 1_V * 1_s / 1_m},  
+  frc::SimpleMotorFeedforward<units::meters>{kS, kV},  
   frc::DifferentialDriveKinematics{units::meter_t{WIDTH}},
-  [this] { return mecanumSubsystem.GetDifferentialWheelSpeeds(); },
+  [this]() { return mecanumSubsystem.GetDifferentialWheelSpeeds(); },
   frc::PIDController{0, 0, 0},
   frc::PIDController{0, 0, 0},
   [this](auto l, auto r) {
-    mecanumSubsystem.DriveVoltages(units::volt_t{l.value()}, units::volt_t{r.value()});
+    
+    // mecanumSubsystem.DriveVoltages(units::volt_t{l.value()}, units::volt_t{r.value()});
   },
   {&mecanumSubsystem}    
 },
@@ -60,9 +87,10 @@ autoCommandGroup{frc2::InstantCommand{[this]{ mecanumSubsystem.SetPose(autoTraje
 
 {
   ConfigureButtonBindings();
-  trajectoryConfig.SetKinematics(differentialKinematics);
-  frc::DifferentialDriveVoltageConstraint voltageConstraint{feedforward, differentialKinematics, units::volt_t{12}};
-  trajectoryConfig.AddConstraint(voltageConstraint);
+  autoTrajectory.Sample(0_s);
+  // trajectoryConfig.SetKinematics(differentialKinematics);
+  // frc::DifferentialDriveVoltageConstraint voltageConstraint{feedforward, differentialKinematics, units::volt_t{12}};
+  // trajectoryConfig.AddConstraint(voltageConstraint);
 
 }
 
@@ -75,6 +103,10 @@ frc2::Command* RobotContainer::GetTeleopCommand() {
 }
 
 frc2::Command* RobotContainer::GetAutonomousCommand() {
+  auto initialState = autoTrajectory.Sample(0_s);
+  auto m_prevSpeeds = kinematics.ToWheelSpeeds(frc::ChassisSpeeds{initialState.velocity, 0_mps, initialState.velocity * initialState.curvature});
   
-  return &autoCommandGroup;
+  // autoCommand.Schedule();
+  // autoCommand.Initialize();
+  return &autoCommand;
 }

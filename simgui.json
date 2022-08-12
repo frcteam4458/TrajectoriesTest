@@ -25,6 +25,13 @@
         "visible": true
       }
     },
+    "Other Devices": {
+      "AnalogGyro[0]": {
+        "header": {
+          "open": true
+        }
+      }
+    },
     "PWM Outputs": {
       "window": {
         "visible": true

@@ -14,9 +14,10 @@ void TeleopCommand::Execute() {
 
     double x = left.GetX();
     double y = left.GetY();
-    double omega = right.GetX();
+    // double omega = right.GetX();
+    double omega = left.GetRawAxis(2);
 
-    subsystem->Drive(units::meters_per_second_t{-x * MAX_SPEED.value()}, units::meters_per_second_t{-y * MAX_SPEED.value()}, units::radians_per_second_t{-omega * MAX_ROT_SPEED.value()});
+    subsystem->Drive(units::meters_per_second_t{-y * MAX_SPEED.value()}, units::radians_per_second_t{x * MAX_ROT_SPEED.value()});
 }
 
 void TeleopCommand::End(bool interrupted) {

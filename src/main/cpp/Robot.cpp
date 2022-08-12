@@ -20,6 +20,7 @@ void Robot::AutonomousInit() {
 
   if (autonomousCommand != nullptr) {
     autonomousCommand->Schedule();
+    
   }
 }
 

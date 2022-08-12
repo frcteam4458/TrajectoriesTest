@@ -4,6 +4,7 @@
 #include <units/velocity.h>
 #include <units/acceleration.h>
 #include <frc/kinematics/DifferentialDriveKinematics.h>
+#include <units/voltage.h>
 
 #pragma once
 

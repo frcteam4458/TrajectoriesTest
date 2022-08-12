@@ -1,6 +1,7 @@
 #include "subsystems/MecanumSubsystem.h"
 
 #include "Constants.h"
+#include <wpi/math>
 
 #include <units/angle.h>
 
@@ -11,7 +12,20 @@
 
 ; // i have no ida why i need this semicolon but this class WILL NOT compile without it
 // update: im keeping it because i think its hilarious but there was no semicolon at the end of Constants.h
+
+// staying named mecanum but changing it to diffrential
 MecanumSubsystem::MecanumSubsystem() :
+drivetrainSim{
+  frc::DCMotor::CIM(2),
+  7.29,
+  7.5_kg_sq_m,
+  60_kg,
+  3_in,
+  0.7112_m,
+
+  {0.001, 0.001, 0.001, 0.1, 0.1, 0.005, 0.005}
+},   // i stole all of these measurements from the docs, just changed neo to cim
+
 fl{FRONT_LEFT},
 fr{FRONT_RIGHT},
 bl{BACK_LEFT},
@@ -37,64 +51,63 @@ s_brEncoder{brEncoder},
 s_gyro{gyro},
 
 pose{8_m, 2_m, frc::Rotation2d{0_deg}},
-odometry{kinematics, units::degree_t{gyro.GetAngle()}, pose},
+odometry{units::degree_t{gyro.GetAngle()}, pose},
+
+
 
 feedforward{kS, kV}
 {
   fl.SetInverted(true);
   bl.SetInverted(true);
 
-  flEncoder.SetDistancePerPulse(0.001);
-  frEncoder.SetDistancePerPulse(0.001);
-  blEncoder.SetDistancePerPulse(0.001);
-  brEncoder.SetDistancePerPulse(0.001);
+  s_flEncoder.SetCount(1000);
+  s_frEncoder.SetCount(1000);
+  s_blEncoder.SetCount(1000);
+  s_brEncoder.SetCount(1000);
+
+  // 0.0762 is the wheel radius in meters
+  flEncoder.SetDistancePerPulse(2 * wpi::math::pi * 0.0762 / s_flEncoder.GetCount());
+  frEncoder.SetDistancePerPulse(2 * wpi::math::pi * 0.0762 / s_frEncoder.GetCount());
+  blEncoder.SetDistancePerPulse(2 * wpi::math::pi * 0.0762 / s_blEncoder.GetCount());
+  brEncoder.SetDistancePerPulse(2 * wpi::math::pi * 0.0762 / s_brEncoder.GetCount());
 
   flEncoder.SetReverseDirection(true);
   blEncoder.SetReverseDirection(true);
 }
 
 void MecanumSubsystem::Periodic() { 
-  frc::MecanumDriveWheelSpeeds wheelSpeeds{units::meters_per_second_t{flEncoder.GetRate()},
-    units::meters_per_second_t{frEncoder.GetRate()}, units::meters_per_second_t{blEncoder.GetRate()},
-    units::meters_per_second_t{brEncoder.GetRate()}};
-  odometry.Update(frc::Rotation2d{GetAngle()}, wheelSpeeds);  
+  frc::DifferentialDriveWheelSpeeds wheelSpeeds{units::meters_per_second_t{flEncoder.GetRate()},
+    units::meters_per_second_t{frEncoder.GetRate()}};
+  odometry.Update(frc::Rotation2d{GetAngle()}, units::meter_t{flEncoder.GetDistance()}, units::meter_t{frEncoder.GetDistance()});  
   field.SetRobotPose(odometry.GetPose());
   frc::SmartDashboard::PutData("Field", &field);
-
-  
 }
 
 void MecanumSubsystem::SimulationPeriodic() {
+  drivetrainSim.SetInputs(fl.Get() * 12_V, fr.Get() * 12_V);
 
-  double s_flPrev = s_flEncoder.GetDistance();
-  double s_frPrev = s_frEncoder.GetDistance();
-  double s_blPrev = s_blEncoder.GetDistance();
-  double s_brPrev = s_brEncoder.GetDistance();
+  drivetrainSim.Update(20_ms);
 
-  s_flEncoder.SetDistance(0.02 * -s_fl.GetSpeed() * MAX_SPEED.value() + s_flEncoder.GetDistance());
-  s_frEncoder.SetDistance(0.02 * s_fr.GetSpeed() * MAX_SPEED.value() + s_frEncoder.GetDistance());
-  s_blEncoder.SetDistance(0.02 * -s_bl.GetSpeed() * MAX_SPEED.value() + s_blEncoder.GetDistance());
-  s_brEncoder.SetDistance(0.02 * s_br.GetSpeed() * MAX_SPEED.value() + s_brEncoder.GetDistance());
+  s_flEncoder.SetDistance(drivetrainSim.GetLeftPosition().value());
+  s_flEncoder.SetRate(drivetrainSim.GetLeftVelocity().value());
+  s_frEncoder.SetDistance(drivetrainSim.GetLeftPosition().value());
+  s_frEncoder.SetRate(drivetrainSim.GetLeftVelocity().value());
+  s_blEncoder.SetDistance(drivetrainSim.GetRightPosition().value());
+  s_blEncoder.SetRate(drivetrainSim.GetRightPosition().value());
+  s_brEncoder.SetDistance(drivetrainSim.GetRightPosition().value());
+  s_brEncoder.SetRate(drivetrainSim.GetRightPosition().value());
 
-  s_flEncoder.SetRate((s_flEncoder.GetDistance() - s_flPrev) / 0.02);
-  s_frEncoder.SetRate((s_frEncoder.GetDistance() - s_frPrev) / 0.02);
-  s_blEncoder.SetRate((s_blEncoder.GetDistance() - s_blPrev) / 0.02);
-  s_brEncoder.SetRate((s_brEncoder.GetDistance() - s_brPrev) / 0.02);
-
-  s_gyro.SetAngle(s_gyro.GetAngle() + kinematics.ToChassisSpeeds(frc::MecanumDriveWheelSpeeds{units::meters_per_second_t{s_flEncoder.GetRate()}, units::meters_per_second_t{s_frEncoder.GetRate()}, units::meters_per_second_t{s_blEncoder.GetRate()}, units::meters_per_second_t{s_brEncoder.GetRate()}}).omega.value() * (180/3.14159) * 0.02);
+  s_gyro.SetRate((-drivetrainSim.GetHeading().Degrees().value() - -drivetrainSim.GetHeading().Degrees().value()) / 0.02);
+  s_gyro.SetAngle(-drivetrainSim.GetHeading().Degrees().value());
 }
 
-void MecanumSubsystem::Drive(units::meters_per_second_t vx, units::meters_per_second_t vy, units::radians_per_second_t omega) {
-  frc::MecanumDriveWheelSpeeds wheelSpeeds = kinematics.ToWheelSpeeds(frc::ChassisSpeeds{vy, vx, omega});
+void MecanumSubsystem::Drive(units::meters_per_second_t vy, units::radians_per_second_t omega) {
+  frc::DifferentialDriveWheelSpeeds wheelSpeeds = differentialKinematics.ToWheelSpeeds(frc::ChassisSpeeds{vy, 0_mps, omega});
 
   wheelSpeeds.Desaturate(MAX_SPEED);
 
-  DriveVoltages(feedforward.Calculate(units::meters_per_second_t{std::clamp(wheelSpeeds.frontLeft.value(), -MAX_SPEED.value(), MAX_SPEED.value())}),
-   feedforward.Calculate(units::meters_per_second_t{std::clamp(wheelSpeeds.frontRight.value(), -MAX_SPEED.value(), MAX_SPEED.value())}),
-   feedforward.Calculate(units::meters_per_second_t{std::clamp(wheelSpeeds.rearLeft.value(), -MAX_SPEED.value(), MAX_SPEED.value())}),
-   feedforward.Calculate(units::meters_per_second_t{std::clamp(wheelSpeeds.rearRight.value(), -MAX_SPEED.value(), MAX_SPEED.value())}));
-
-  // MecanumSubsystem::omega = omega;
+  DriveVoltages(feedforward.Calculate(units::meters_per_second_t{std::clamp(wheelSpeeds.left.value(), -MAX_SPEED.value(), MAX_SPEED.value())}),
+   feedforward.Calculate(units::meters_per_second_t{std::clamp(wheelSpeeds.right.value(), -MAX_SPEED.value(), MAX_SPEED.value())}));
 }
 
 void MecanumSubsystem::DriveVoltages(units::volt_t _fl, units::volt_t _fr, units::volt_t _bl, units::volt_t _br) {
@@ -109,12 +122,12 @@ void MecanumSubsystem::DriveVoltages(units::volt_t _fl, units::volt_t _fr, units
   s_br.SetSpeed(std::clamp(_br.value(), -12.0, 12.0) / 12);
 }
 
-void MecanumSubsystem::Drive(units::meters_per_second_t vx, units::radians_per_second_t omega) {
-  Drive(vx, 0_mps, omega);
-}
-
 void MecanumSubsystem::DriveVoltages(units::volt_t left, units::volt_t right) {
   DriveVoltages(left, right, left, right);
+}
+
+void MecanumSubsystem::Turn(double speed) {
+  DriveVoltages(feedforward.Calculate(units::meters_per_second_t{speed}), -feedforward.Calculate(units::meters_per_second_t{speed}));
 }
 
 void MecanumSubsystem::ResetEncoders() {
@@ -129,22 +142,24 @@ units::degree_t MecanumSubsystem::GetAngle() {
 }
 
 double MecanumSubsystem::GetAngleRaw() {
-  return gyro.GetAngle(); 
+  return gyro.GetAngle() + gyroOffset; 
 }
 
 frc::Pose2d MecanumSubsystem::GetPose() {
   return odometry.GetPose();
 }
 
-frc::MecanumDriveWheelSpeeds MecanumSubsystem::GetMecanumWheelSpeeds() {
-  return {units::meters_per_second_t{flEncoder.GetRate()}, units::meters_per_second_t{frEncoder.GetRate()}, units::meters_per_second_t{blEncoder.GetRate()}, units::meters_per_second_t{brEncoder.GetRate()}};
+frc::DifferentialDriveWheelSpeeds MecanumSubsystem::GetMecanumWheelSpeeds() {
+  return {units::meters_per_second_t{flEncoder.GetRate()}, units::meters_per_second_t{frEncoder.GetRate()}};
 }
 
 frc::DifferentialDriveWheelSpeeds MecanumSubsystem::GetDifferentialWheelSpeeds() {
-  return {units::meters_per_second_t{flEncoder.GetRate()}, units::meters_per_second_t{frEncoder.GetRate()}};
+  return frc::DifferentialDriveWheelSpeeds{units::meters_per_second_t{flEncoder.GetRate()}, units::meters_per_second_t{frEncoder.GetRate()}};
 }
 
 void MecanumSubsystem::SetPose(frc::Pose2d _pose) {
   pose = _pose;
-  odometry = frc::MecanumDriveOdometry{kinematics, _pose.Rotation().Degrees(), _pose};
+  odometry = frc::DifferentialDriveOdometry{_pose.Rotation().Degrees(), _pose};
+  gyro.Reset();
+  gyroOffset = _pose.Rotation().Degrees().value();
 }
